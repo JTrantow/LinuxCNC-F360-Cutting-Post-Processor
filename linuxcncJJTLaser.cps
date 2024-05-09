@@ -125,6 +125,30 @@ properties = {
     value      : true,
     scope      : "post"
   },
+  a_spindle_N: {
+    title      : "Spindle N",
+    description: "Choose spindle for M3/M4 laser commands.",
+    group      : "Laser Setup",
+    type       : "number",
+    value      : 0,
+    scope      : "post"
+  },
+  analog_out: {
+    title      : "analog-out",
+    description: "Choose this value as E value in M67/M68.",
+    group      : "Laser Setup",
+    type       : "number",
+    value      : 0,
+    scope      : "post"
+  },
+  b_speed: {
+    title      : "spindle-speed",
+    description: "M3/M4 Sxxx Spindle speed.",
+    group      : "Laser Setup",
+    type       : "string",
+    value      : "100",
+    scope      : "post"
+  },
   throughPower: {
     title      : "Through power",
     description: "Sets the laser power used for through cutting.", 
@@ -148,9 +172,7 @@ properties = {
     type       : "number",
     value      : 100,
     scope      : "post"
-  }
-
-  ,
+  },
   useAirAssist: {
     title : "AirAssist",
     description: "Enable to turn on the laser air compressor.",
@@ -400,7 +422,6 @@ function onSection() {
 
   var abc = defineWorkPlane(currentSection, true);
 
-  writeComment("onSection(tool.coolant)");
   //setCoolant(tool.coolant); // writes the required coolant codes. How do I set tool.coolant?
   if  (getProperty("useAirAssist")) {
     setCoolant(COOLANT_AIR); // writes the required coolant codes
@@ -686,19 +707,26 @@ function onCommand(command) {
     writeComment("COMMAND_END");
     return;
   case COMMAND_SPINDLE_CLOCKWISE:
-//    writeComment("COMMAND_SPINDLE_CLOCKWISE");
-    writeln("M3");
+    write("M3");
     return;
   case COMMAND_SPINDLE_COUNTERCLOCKWISE:
-//    writeComment("COMMAND_SPINDLE_COUNTERCLOCKWISE");
-    writeln("M4");
+    write("M4");
     return;
   case COMMAND_START_SPINDLE:
-  //  writeln("( COMMAND_START_SPINDLE Zero the laser PWM. )");
-    writeln("M68 E0 Q0");
+  //  Zero the laser PWM. 
+    write("M68 E");
+    write(getProperty("analog_out"));
+    writeln(" Q0");
+
+//“M3 $0 S#<_hal[qtplasmac.cut_amps-s]>"
     // Figure out how to set tool.clockwise and tool.coolant.
     //onCommand(tool.clockwise ? COMMAND_SPINDLE_CLOCKWISE : COMMAND_SPINDLE_COUNTERCLOCKWISE);
     onCommand(COMMAND_SPINDLE_CLOCKWISE);
+
+    write(" $");
+    write(getProperty("a_spindle_N"));
+    write(" S");
+    writeln(getProperty("b_speed"));
 
     forceSpindleSpeed = false;
 //    writeBlock(sOutput.format(spindleSpeed), mFormat.format(tool.clockwise ? 3 : 4));
@@ -727,7 +755,9 @@ function onCommand(command) {
     return;
   
   case COMMAND_POWER_ON:
-    write("M67 E0 Q");
+    write("M67 E");
+    write(getProperty("analog_out"));
+    write(" Q");
     switch (currentSection.jetMode) {
     case JET_MODE_THROUGH:
       writeln(getProperty("throughPower"));
@@ -745,7 +775,9 @@ function onCommand(command) {
     }
     return;
   case COMMAND_POWER_OFF:
-    writeln("M68 E0 Q0");
+    write("M68 E");
+    write(getProperty("analog_out"));
+    writeln(" Q0");
     return;
   case COMMAND_LOCK_MULTI_AXIS:
     return;
